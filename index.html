@@ -1,2 +1,125 @@
-hello friend
-<h1>aaaaaaaa</h1>
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<body>
+
+<script type="text/javascript">
+	
+class Scene {
+    constructor(size = {width: 1000, height: 500}, options = {zIndex: 1}) {
+        this.objects = [];
+
+        this.tickInterval = undefined;
+        this.width = size.width;
+        this.height = size.height;
+
+        this._cursor = {posX:0, poxY:0};
+
+        let canvas = document.createElement('canvas');
+        canvas.width = size.width;
+        canvas.height = size.height;
+        canvas.style.position = 'absolute';
+        canvas.style.backgroundColor = 'black';
+        canvas.style.zIndex = options.zIndex;
+        document.body.appendChild(canvas);
+        this.context = canvas.getContext('2d');
+    }
+
+    addCustomEvents() {
+    	document.querySelector('canvas').addEventListener('mousemove', e => {
+    		this._cursor.posX = e.clientX;
+    		this._cursor.posY = e.clientY;
+
+    		spawnCircle();
+
+    	})
+    }
+
+    addObject(object) {
+        this.objects.push(object);
+    }
+
+    render() {
+        this.context.clearRect(0, 0, this.context.canvas.width, this.context.canvas.height);
+        this.objects.forEach( o => {
+          o.draw(this.context);
+        });
+    }
+}
+
+
+
+class Circle {
+  constructor(options) {
+      this.options = options;
+      this.context = undefined;
+  }
+
+  animateFlake() {
+     this.options.y += Math.random() * 0.6;
+
+     if(this.options.y > scene.height - 30) {
+        let index = scene.objects.indexOf(this);
+        scene.objects.splice(index, 1);
+     }
+  }
+
+  draw(context) {
+      this.context = context;
+      if (this.context == null) return false;
+
+          this.context.beginPath();
+          this.context.arc(
+              this.options.x,
+              this.options.y,
+              this.options.radius,
+              0,
+              2*Math.PI,
+              false
+          );
+          this.context.fillStyle = "orange";
+          this.context.fill();
+          //this.context.lineWidth = 1;
+          //this.context.strokeStyle = '#FF4136';
+          this.context.stroke();
+    }
+}
+
+
+
+
+let scene = new Scene();
+scene.addCustomEvents();
+
+
+function spawnCircle() {
+  let circle = new Circle({
+    x: scene._cursor.posX,//Math.floor((Math.random() * scene.width) + 1),
+    y: scene._cursor.posY,
+    radius: Math.floor((Math.random() * 15) + 1)
+  });
+
+  circle.options.startX = circle.options.x;
+  circle.options.dir = 'right'
+
+  scene.addObject(circle);
+  scene.render();
+}
+
+
+animateScenes(scene);
+
+function animateScenes(scenes) {
+  scene.render();
+  scene.objects.forEach(obj => obj.animateFlake())
+  
+  window.requestAnimationFrame(animateScenes.bind(this, scene));
+}
+
+
+
+</script>
+</body>
+</html>
