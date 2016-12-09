@@ -35,6 +35,14 @@ class Scene {
     		spawnCircle();
 
     	})
+
+    	document.querySelector('touchmove').addEventListener('mousemove', e => {
+    		this._cursor.posX = e.clientX;
+    		this._cursor.posY = e.clientY;
+
+    		spawnCircle();
+
+    	})
     }
 
     addObject(object) {
