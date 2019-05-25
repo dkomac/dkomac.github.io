@@ -5,7 +5,7 @@ body {
   width: 100%;
   font-family: "Oswald", sans-serif;
   color: white;
-  background-color: #0c0017;
+  color: #4f108a;
   position: relative;
 }
 body .presentation-container {
@@ -17,7 +17,7 @@ body .presentation-container {
 body .presentation-container h1 {
   margin: 0;
   font-size: 60px;
-  text-shadow: 1px 0 0 rgba(12, 0, 23, 0.7), 0 -1px 0 rgba(12, 0, 23, 0.7), 0 1px 0 rgba(12, 0, 23, 0.7), -1px 0 0 rgba(12, 0, 23, 0.7);
+  line-height: 1.1;
 }
 body .presentation-container h2 {
   margin: 0;
@@ -26,10 +26,16 @@ body .presentation-container h2 {
 body .presentation-container h3 {
   margin: 0;
 }
+body .presentation-container .line {
+  height: 2px;
+  width: 100%;
+  background-color: #4f108a;
+  margin: 20px 0 10px 0;
+}
 body .presentation-container figure {
   margin: 0;
   position: absolute;
-  top: -135px;
+  top: -150px;
   right: 50px;
   z-index: -1;
   opacity: 0.8;
@@ -42,8 +48,12 @@ body .icon-container {
   text-align: center;
 }
 body .icon-container a {
+  transition: color 0.5s;
   color: inherit;
   text-decoration: none;
   margin: 0 10px 0 10px;
   cursor: pointer;
+}
+body .icon-container a:hover {
+  color: rgba(79, 16, 138, 0.7);
 }

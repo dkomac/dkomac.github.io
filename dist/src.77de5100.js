@@ -8906,14 +8906,14 @@ var _default = _vue.default.extend({
 });
 
 exports.default = _default;
-        var $d54e64 = exports.default || module.exports;
+        var $da9ff8 = exports.default || module.exports;
       
-      if (typeof $d54e64 === 'function') {
-        $d54e64 = $d54e64.options;
+      if (typeof $da9ff8 === 'function') {
+        $da9ff8 = $da9ff8.options;
       }
     
         /* template */
-        Object.assign($d54e64, (function () {
+        Object.assign($da9ff8, (function () {
           var render = function() {
   var _vm = this
   var _h = _vm.$createElement
@@ -8927,6 +8927,8 @@ exports.default = _default;
       _c("h3", [_vm._v(_vm._s(_vm.presentation))]),
       _vm._v(" "),
       _c("figure", [_c("img", { attrs: { src: _vm.imageSrc } })]),
+      _vm._v(" "),
+      _c("div", { staticClass: "line" }),
       _vm._v(" "),
       _vm._m(0)
     ])
@@ -8969,9 +8971,9 @@ render._withStripped = true
         if (api.compatible) {
           module.hot.accept();
           if (!module.hot.data) {
-            api.createRecord('$d54e64', $d54e64);
+            api.createRecord('$da9ff8', $da9ff8);
           } else {
-            api.reload('$d54e64', $d54e64);
+            api.reload('$da9ff8', $da9ff8);
           }
         }
 
@@ -9025,7 +9027,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "51658" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "55187" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

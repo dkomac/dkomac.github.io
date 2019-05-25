@@ -8,6 +8,7 @@
       <figure>
         <img :src="imageSrc">
       </figure>
+      <div class="line"></div>
       <div class="icon-container">
         <a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/dennis-komac-b5285381"></a>
         <a class="fab fa-github" href="https://github.com/dkomac"></a>
@@ -36,14 +37,14 @@ export default Vue.extend({
 @import url("https://fonts.googleapis.com/css?family=Oswald&display=swap");
 
 $primary-color: white;
-$bg: #0c0017;
+$main-color: #4f108a;
 body {
   margin: 0;
   height: 100vh;
   width: 100%;
   font-family: "Oswald", sans-serif;
   color: $primary-color;
-  background-color: $bg;
+  color: $main-color;
   position: relative;
 
   .presentation-container {
@@ -55,8 +56,7 @@ body {
     h1 {
       margin: 0;
       font-size: 60px;
-      text-shadow: 1px 0 0 rgba($bg, 0.7), 0 -1px 0 rgba($bg, 0.7),
-        0 1px 0 rgba($bg, 0.7), -1px 0 0 rgba($bg, 0.7);
+      line-height: 1.1;
     }
     h2 {
       margin: 0;
@@ -66,10 +66,17 @@ body {
       margin: 0;
     }
 
+    .line {
+      height: 2px;
+      width: 100%;
+      background-color: $main-color;
+      margin: 20px 0 10px 0;
+    }
+
     figure {
       margin: 0;
       position: absolute;
-      top: -135px;
+      top: -150px;
       right: 50px;
       z-index: -1;
       opacity: 0.8;
@@ -85,10 +92,15 @@ body {
     text-align: center;
 
     a {
+      transition: color 0.5s;
       color: inherit;
       text-decoration: none;
       margin: 0 10px 0 10px;
       cursor: pointer;
+
+      &:hover {
+        color: rgba($main-color, 0.7)
+      }
     }
   }
 }
