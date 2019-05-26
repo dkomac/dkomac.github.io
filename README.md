@@ -1,3 +1,4 @@
-readme haha xD
-go to: https://dkomac-edd04.firebaseapp.com/
+## automated pipeline with buddy and firebase
+
+https://dkomac-edd04.firebaseapp.com/
 
