@@ -5,7 +5,6 @@
   --text: #0a0a0a;
   --accent: #0a0a0a;          /* link icons */
   --accent-hover: #666666;
-  --flicker-color: #0a0a0a;   /* color flashed mid-flicker */
 }
 
 html[data-theme="dark"] {
@@ -14,7 +13,6 @@ html[data-theme="dark"] {
   --text: #f3f3f3;
   --accent: #d0d0d0;
   --accent-hover: #ffffff;
-  --flicker-color: #66ccff;   /* neon-ish flash */
 }
 
 * { box-sizing: border-box; }
@@ -75,9 +73,17 @@ body {
   letter-spacing: -0.01em;
   max-width: 92vw;
   opacity: 0;
-  transition: opacity 0.7s ease;
+  transition: opacity 0.7s ease, font-size 0.35s ease;
 }
 .hero.entered { opacity: 1; }
+
+/* while scrambling into CJK: switch to a CJK font + a size that fits
+   full-width glyphs (CJK characters are wider than Latin letters) */
+.hero.cjk {
+  font-size: clamp(1rem, 4.4vw, 2.6rem);
+  font-family: "Noto Sans KR", "Noto Sans SC", "Apple SD Gothic Neo",
+    "Hiragino Sans GB", "Malgun Gothic", "Microsoft YaHei", sans-serif;
+}
 
 .hero .line { display: block; }
 
@@ -93,20 +99,6 @@ body {
   will-change: transform;      /* only during the fall, not for the page's life */
   z-index: 5;
 }
-
-/* flicker — dying-sign stutter */
-@keyframes flicker {
-  0%, 100% { opacity: 1; }
-  10% { opacity: 0.2; }
-  12% { opacity: 1; }
-  20% { opacity: 0.45; color: var(--flicker-color); }
-  22% { opacity: 1; color: inherit; }
-  55% { opacity: 0.12; }
-  57% { opacity: 1; }
-  70% { opacity: 0.6; color: var(--flicker-color); }
-  72% { opacity: 1; color: inherit; }
-}
-.hero .letter.flicker { animation: flicker 0.55s steps(2, end) infinite; }
 
 /* reveal — the line that rises into the empty center */
 .reveal {
@@ -130,9 +122,8 @@ body {
   transform: translate(-50%, -50%);
 }
 
-/* reduced motion: calm static final state, no flicker or physics */
+/* reduced motion: calm static final state, no scramble or physics */
 @media (prefers-reduced-motion: reduce) {
   .hero, .hero.entered { opacity: 1; transition: none; }
-  .hero .letter.flicker { animation: none; }
   .reveal { transition: none; }
 }

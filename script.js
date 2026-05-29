@@ -1,6 +1,8 @@
 /* ============================================================
-   Physics-text landing — flicker, shatter & pile, reveal.
-   Plays once on load, then rests. Theme via <html data-theme>.
+   Physics-text landing — scramble, shatter & pile, reveal.
+   The name scrambles into CJK glyphs, then every glyph drops
+   straight down from its place and piles on the floor; a final
+   line then reveals. Plays once on load. Theme via <html data-theme>.
    ============================================================ */
 
 /* ---- copy (edit here) ---- */
@@ -10,19 +12,29 @@ const COPY = {
   final: "or break things. whatever floats your boat.",
 };
 
+/* ---- scramble glyph pools. Swap CFG.scramblePool to change the script. ---- */
+const SCRIPTS = {
+  // Korean (Hangul syllables)
+  korean: "가나다라마바사아자차카타파하거너더러머버서어저처커터퍼허고노도로모보소오조초코토포호구누두루무부수우주추쿠투푸후그느드르므브스이지치키히",
+  // Chinese (common Hanzi)
+  chinese: "海風山川光時空夢花月雪火水木金土日月生愛道德無心力天地人和氣理形色音雨雷電星雲霧",
+};
+
 /* ---- tuning (edit the feel here) ---- */
 const CFG = {
   enterDelay: 350,        // ms after load before text fades in
-  flickerDelay: 900,      // ms text stays calm before flicker starts
-  flickerDuration: 1100,  // ms of flicker before the collapse
+  scrambleDelay: 900,     // ms the real name stays readable before it scrambles
+  scrambleDuration: 1200, // ms of CJK scrambling before the collapse
+  scrambleTick: 70,       // ms between glyph swaps while scrambling
+  scramblePool: SCRIPTS.korean, // which script to scramble into (SCRIPTS.chinese for Chinese)
   settleTime: 3200,       // ms after the collapse starts before the reveal
   gravity: 1,             // Matter world gravity (y)
   restitution: 0.18,      // letter bounciness (lower = less scatter on impact)
   friction: 0.6,          // letter surface friction
   frictionAir: 0.01,
   floorThickness: 200,    // px (mostly below the viewport)
-  spinFactor: 0.04,       // initial angular velocity spread (gentle tumble, not a whirl)
-  kickFactor: 0.45,       // initial sideways velocity spread (small drift, not a burst)
+  spinFactor: 0.03,       // initial angular velocity (gentle tumble on landing)
+  kickFactor: 0,          // sideways velocity at release — 0 = falls straight down from place
   releaseBatch: 2,        // how many letters drop per step (a couple at a time)
   releaseInterval: 95,    // ms between each batch dropping — the cascade pacing
   maxFrames: 1400,        // physics loop safety cap (frames)
@@ -70,13 +82,28 @@ function buildLetters(lines) {
   return glyphs;
 }
 
-/* Beat 2: flicker the whole second line + an index-derived subset of line 1. */
-function startFlicker(glyphs, line2Start) {
+/* Beat 2: scramble every glyph through CJK characters — replaces the flicker.
+   Adds the .cjk class (CJK font + fitting size) and cycles each glyph's
+   character on a timer. Returns the interval id so the caller can stop it. */
+function startScramble(glyphs) {
+  heroEl.classList.add("cjk");
+  const pool = CFG.scramblePool;
+  let tick = 0;
+  return setInterval(() => {
+    tick += 1;
+    glyphs.forEach((span, i) => {
+      span.textContent = pool[(tick * 7 + i * 13) % pool.length];
+    });
+  }, CFG.scrambleTick);
+}
+
+/* Freeze each glyph on a stable, well-varied final CJK character so it
+   falls as that glyph (jitter spreads the choices across the pool). */
+function freezeScramble(glyphs) {
+  const pool = CFG.scramblePool;
   glyphs.forEach((span, i) => {
-    const picked = i >= line2Start || i % 4 === 0;
-    if (!picked) return;
-    span.style.animationDelay = `${(jitter(i) * 0.25).toFixed(3)}s`;
-    span.classList.add("flicker");
+    const idx = Math.floor((jitter(i * 3 + 1) * 0.5 + 0.5) * pool.length) % pool.length;
+    span.textContent = pool[idx];
   });
 }
 
@@ -174,16 +201,16 @@ async function runSequence() {
   }
 
   const glyphs = buildLetters([COPY.line1, COPY.line2]);
-  const line2Start = [...COPY.line1].filter((c) => c !== " ").length;
 
   await wait(CFG.enterDelay);
   heroEl.classList.add("entered");
 
-  await wait(CFG.flickerDelay);
-  startFlicker(glyphs, line2Start);
+  await wait(CFG.scrambleDelay);
+  const scrambleId = startScramble(glyphs);
 
-  await wait(CFG.flickerDuration);
-  glyphs.forEach((s) => s.classList.remove("flicker"));
+  await wait(CFG.scrambleDuration);
+  clearInterval(scrambleId);
+  freezeScramble(glyphs);
   shatter(glyphs);
 
   await wait(CFG.settleTime);
