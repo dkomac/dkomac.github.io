@@ -83,7 +83,6 @@ body {
 
 .hero .letter {
   display: inline-block;       /* required so per-glyph transforms apply */
-  will-change: transform, opacity;
 }
 
 /* a glyph promoted to a physics body floats above the layout */
@@ -91,6 +90,7 @@ body {
   position: fixed;
   margin: 0;
   transform-origin: center center;
+  will-change: transform;      /* only during the fall, not for the page's life */
   z-index: 5;
 }
 

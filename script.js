@@ -33,6 +33,9 @@ const prefersReducedMotion = window.matchMedia(
 const heroEl = document.querySelector("[data-hero]");
 const revealEl = document.querySelector("[data-reveal]");
 
+// COPY is the single source of truth — keep the accessible name in sync with it.
+heroEl.setAttribute("aria-label", `${COPY.line1}. ${COPY.line2} ${COPY.final}`);
+
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /* deterministic per-index pseudo-random in [-1, 1] (no Math.random) */
@@ -141,6 +144,7 @@ function shatter(glyphs) {
 
 /* Beat 4: raise the final line into the now-empty center. */
 function reveal() {
+  revealEl.textContent = COPY.final;
   revealEl.classList.add("show");
 }
 
