@@ -1,8 +1,9 @@
 /* ============================================================
-   Physics-text landing — scramble, shatter & pile, reveal.
-   The name scrambles into CJK glyphs, then every glyph drops
-   straight down from its place and piles on the floor; a final
-   line then reveals. Plays once on load. Theme via <html data-theme>.
+   Physics-text landing — glitch, shatter & pile, reveal.
+   The name fades in; one or two characters glitch between their
+   letter and a CJK glyph; then every glyph drops straight down
+   from its place and piles on the floor; a final line reveals.
+   Plays once on load. Theme via <html data-theme>.
    ============================================================ */
 
 /* ---- copy (edit here) ---- */
@@ -12,7 +13,7 @@ const COPY = {
   final: "or break things. whatever floats your boat.",
 };
 
-/* ---- scramble glyph pools. Swap CFG.scramblePool to change the script. ---- */
+/* ---- glitch glyph pools. Swap CFG.flickerPool to change the script. ---- */
 const SCRIPTS = {
   // Korean (Hangul syllables)
   korean: "가나다라마바사아자차카타파하거너더러머버서어저처커터퍼허고노도로모보소오조초코토포호구누두루무부수우주추쿠투푸후그느드르므브스이지치키히",
@@ -23,10 +24,11 @@ const SCRIPTS = {
 /* ---- tuning (edit the feel here) ---- */
 const CFG = {
   enterDelay: 350,        // ms after load before text fades in
-  scrambleDelay: 900,     // ms the real name stays readable before it scrambles
-  scrambleDuration: 1200, // ms of CJK scrambling before the collapse
-  scrambleTick: 70,       // ms between glyph swaps while scrambling
-  scramblePool: SCRIPTS.korean, // which script to scramble into (SCRIPTS.chinese for Chinese)
+  flickerDelay: 900,      // ms the name stays readable before the glitch
+  flickerDuration: 1100,  // ms of glitching before the collapse
+  flickerTick: 110,       // ms between glitch swaps (real letter ⇄ CJK)
+  flickerCount: 2,        // how many characters glitch (just one or two)
+  flickerPool: SCRIPTS.korean, // characters the glitch swaps in (SCRIPTS.chinese for Chinese)
   settleTime: 3200,       // ms after the collapse starts before the reveal
   gravity: 1,             // Matter world gravity (y)
   restitution: 0.18,      // letter bounciness (lower = less scatter on impact)
@@ -74,6 +76,7 @@ function buildLetters(lines) {
       const span = document.createElement("span");
       span.className = "letter";
       span.textContent = ch;
+      span.dataset.char = ch;       // remember the real letter to restore after the glitch
       line.append(span);
       glyphs.push(span);
     }
@@ -82,28 +85,47 @@ function buildLetters(lines) {
   return glyphs;
 }
 
-/* Beat 2: scramble every glyph through CJK characters — replaces the flicker.
-   Adds the .cjk class (CJK font + fitting size) and cycles each glyph's
-   character on a timer. Returns the interval id so the caller can stop it. */
-function startScramble(glyphs) {
-  heroEl.classList.add("cjk");
-  const pool = CFG.scramblePool;
-  let tick = 0;
-  return setInterval(() => {
-    tick += 1;
-    glyphs.forEach((span, i) => {
-      span.textContent = pool[(tick * 7 + i * 13) % pool.length];
-    });
-  }, CFG.scrambleTick);
+/* Pick a few distinct glyph indices (deterministic, scattered via jitter). */
+function pickFlickerIndices(total, count) {
+  const picks = [];
+  let i = 0;
+  while (picks.length < Math.min(count, total) && i < total * 8) {
+    const k = Math.floor((jitter(i * 5 + 3) * 0.5 + 0.5) * total) % total;
+    if (!picks.includes(k)) picks.push(k);
+    i += 1;
+  }
+  return picks;
 }
 
-/* Freeze each glyph on a stable, well-varied final CJK character so it
-   falls as that glyph (jitter spreads the choices across the pool). */
-function freezeScramble(glyphs) {
-  const pool = CFG.scramblePool;
-  glyphs.forEach((span, i) => {
-    const idx = Math.floor((jitter(i * 3 + 1) * 0.5 + 0.5) * pool.length) % pool.length;
-    span.textContent = pool[idx];
+/* Beat 2: glitch just one or two characters — each chosen glyph flickers
+   between its real letter and a CJK character; the rest stay readable.
+   Returns { id, picks } so the caller can stop it and restore the letters. */
+function startFlicker(glyphs) {
+  const pool = CFG.flickerPool;
+  const picks = pickFlickerIndices(glyphs.length, CFG.flickerCount).map((k) => glyphs[k]);
+  picks.forEach((span) => {
+    span.style.width = "1.1em";       // reserve full-width so neighbours don't shift
+    span.style.textAlign = "center";
+  });
+  let tick = 0;
+  const id = setInterval(() => {
+    tick += 1;
+    picks.forEach((span, j) => {
+      span.textContent = tick % 2 === 0
+        ? pool[(tick * 7 + j * 13) % pool.length]
+        : span.dataset.char;
+    });
+  }, CFG.flickerTick);
+  return { id, picks };
+}
+
+/* Stop the glitch and restore every flickered glyph to its real letter. */
+function stopFlicker(flicker) {
+  clearInterval(flicker.id);
+  flicker.picks.forEach((span) => {
+    span.textContent = span.dataset.char;
+    span.style.removeProperty("width");
+    span.style.removeProperty("text-align");
   });
 }
 
@@ -205,12 +227,11 @@ async function runSequence() {
   await wait(CFG.enterDelay);
   heroEl.classList.add("entered");
 
-  await wait(CFG.scrambleDelay);
-  const scrambleId = startScramble(glyphs);
+  await wait(CFG.flickerDelay);
+  const flicker = startFlicker(glyphs);
 
-  await wait(CFG.scrambleDuration);
-  clearInterval(scrambleId);
-  freezeScramble(glyphs);
+  await wait(CFG.flickerDuration);
+  stopFlicker(flicker);
   shatter(glyphs);
 
   await wait(CFG.settleTime);
