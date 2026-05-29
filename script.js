@@ -76,7 +76,6 @@ function buildLetters(lines) {
       const span = document.createElement("span");
       span.className = "letter";
       span.textContent = ch;
-      span.dataset.char = ch;       // remember the real letter to restore after the glitch
       line.append(span);
       glyphs.push(span);
     }
@@ -97,43 +96,48 @@ function pickFlickerIndices(total, count) {
   return picks;
 }
 
-/* Beat 2: glitch just one or two characters — each chosen glyph flickers
-   between its real letter and a CJK character; the rest stay readable.
-   Returns { id, picks } so the caller can stop it and restore the letters. */
+/* Beat 2: glitch just one or two characters. The real letter is left
+   completely untouched in the layout; a CJK glyph is painted on top via an
+   absolutely-positioned overlay (which can't affect layout), so nothing
+   ever moves. On CJK ticks the overlay shows and the real letter is hidden
+   (color only); on the alternate ticks the real letter shows through.
+   Returns { id, picks, overlays } so the caller can stop and clean up. */
 function startFlicker(glyphs) {
   const pool = CFG.flickerPool;
   const picks = pickFlickerIndices(glyphs.length, CFG.flickerCount).map((k) => glyphs[k]);
-  picks.forEach((span) => {
-    // Pin the box to the letter's natural size, then let a wider/taller CJK
-    // glyph overflow visually instead of reflowing the line. The text never
-    // moves — it just drops from exactly where it sits.
-    const r = span.getBoundingClientRect();
-    span.style.width = `${r.width}px`;
-    span.style.height = `${r.height}px`;
-    span.style.overflow = "visible";
-    span.style.textAlign = "center";
+  const overlays = picks.map((span) => {
+    span.style.position = "relative";   // anchor for the overlay; no offset = no move
+    const ov = document.createElement("span");
+    ov.className = "glitch-overlay";
+    ov.setAttribute("aria-hidden", "true");
+    span.append(ov);
+    return ov;
   });
   let tick = 0;
   const id = setInterval(() => {
     tick += 1;
+    const showCjk = tick % 2 === 0;
     picks.forEach((span, j) => {
-      span.textContent = tick % 2 === 0
-        ? pool[(tick * 7 + j * 13) % pool.length]
-        : span.dataset.char;
+      if (showCjk) {
+        overlays[j].textContent = pool[(tick * 7 + j * 13) % pool.length];
+        overlays[j].style.visibility = "visible";
+        span.style.color = "transparent";
+      } else {
+        overlays[j].style.visibility = "hidden";
+        span.style.color = "";
+      }
     });
   }, CFG.flickerTick);
-  return { id, picks };
+  return { id, picks, overlays };
 }
 
-/* Stop the glitch and restore every flickered glyph to its real letter. */
+/* Stop the glitch: remove the overlays and restore the real letters. */
 function stopFlicker(flicker) {
   clearInterval(flicker.id);
+  flicker.overlays.forEach((ov) => ov.remove());
   flicker.picks.forEach((span) => {
-    span.textContent = span.dataset.char;
-    span.style.removeProperty("width");
-    span.style.removeProperty("height");
-    span.style.removeProperty("overflow");
-    span.style.removeProperty("text-align");
+    span.style.removeProperty("position");
+    span.style.removeProperty("color");
   });
 }
 

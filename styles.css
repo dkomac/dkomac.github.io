@@ -83,6 +83,18 @@ body {
   display: inline-block;       /* required so per-glyph transforms apply */
 }
 
+/* glitch overlay: a CJK glyph painted on top of a letter without affecting
+   layout (the letter underneath keeps its place; only its color is toggled) */
+.hero .letter .glitch-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 /* a glyph promoted to a physics body floats above the layout */
 .hero .letter.physics {
   position: fixed;
