@@ -163,27 +163,30 @@ function shatter(glyphs) {
   const rightWall = Bodies.rectangle(W + 30, H / 2, 60, H * 3, { isStatic: true });
   Composite.add(engine.world, [floor, leftWall, rightWall]);
 
-  // Prepare every glyph: pin it in place and build its body, but hold the
-  // body out of the world until it's this letter's turn to drop.
-  const pending = [];
-  glyphs.forEach((span, i) => {
-    const rect = span.getBoundingClientRect();
-    if (rect.width < 1 || rect.height < 1) return;
+  // Measure every glyph's center while the whole text is still in normal flow.
+  const measured = glyphs
+    .map((span) => ({ span, rect: span.getBoundingClientRect() }))
+    .filter(({ rect }) => rect.width >= 1 && rect.height >= 1);
+
+  // Build a physics body per glyph at its measured center. Crucially the glyph
+  // STAYS in normal flow — we never set position/top/left, which would
+  // re-anchor it (inline-block blockifies to block under position:fixed) and
+  // make it jump. We only ever apply a transform, which starts at
+  // translate(0,0): the letter sits exactly where it rendered and animates
+  // from there, while un-dropped letters keep their place (transforms don't
+  // reflow). Bodies are held out of the world until released, for the cascade.
+  const pending = measured.map(({ span, rect }, i) => {
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
 
     span.classList.add("physics");
-    span.style.left = `${rect.left}px`;
-    span.style.top = `${rect.top}px`;
-    span.style.width = `${rect.width}px`;
-    span.style.height = `${rect.height}px`;
 
     const body = Bodies.rectangle(cx, cy, rect.width, rect.height, {
       restitution: CFG.restitution,
       friction: CFG.friction,
       frictionAir: CFG.frictionAir,
     });
-    pending.push({ span, body, cx, cy, i });
+    return { span, body, cx, cy, i };
   });
 
   // Only released letters are tracked here and transformed each frame;

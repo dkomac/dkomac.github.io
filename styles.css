@@ -95,12 +95,12 @@ body {
   pointer-events: none;
 }
 
-/* a glyph promoted to a physics body floats above the layout */
+/* a glyph being animated by physics — stays in flow, only its transform
+   changes (so nothing reflows and it falls from exactly where it rendered) */
 .hero .letter.physics {
-  position: fixed;
-  margin: 0;
   transform-origin: center center;
-  will-change: transform;      /* only during the fall, not for the page's life */
+  will-change: transform;      /* only during the fall */
+  position: relative;          /* lift above sibling letters without leaving flow */
   z-index: 5;
 }
 
@@ -109,6 +109,7 @@ body {
   position: fixed;
   left: 50%;
   top: 50%;
+  z-index: 6;                  /* above the fallen letter pile */
   transform: translate(-50%, calc(-50% + 26px));
   margin: 0;
   width: min(92vw, 42rem);
