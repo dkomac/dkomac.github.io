@@ -109,9 +109,9 @@ body {
 .reveal {
   position: fixed;
   left: 50%;
-  top: 50%;
+  top: 50%;                    /* JS sets this to the tagline's top edge */
   z-index: 6;                  /* above the fallen letter pile */
-  transform: translate(-50%, calc(-50% + 26px));
+  transform: translate(-50%, 26px);
   margin: 0;
   width: min(92vw, 42rem);
   text-align: center;
@@ -125,7 +125,7 @@ body {
 }
 .reveal.show {
   opacity: 1;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, 0);
 }
 
 /* reduced motion: calm static final state, no scramble or physics */
