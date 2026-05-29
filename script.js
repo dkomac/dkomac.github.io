@@ -1,9 +1,9 @@
 /* ============================================================
    Physics-text landing — glitch, shatter & pile, reveal.
-   The name fades in; one or two characters glitch between their
-   letter and a CJK glyph; then every glyph drops straight down
-   from its place and piles on the floor; a final line reveals.
-   Plays once on load. Theme via <html data-theme>.
+   The name fades in; one or two characters glitch — tearing into
+   offset horizontal slices (a datamosh look) — then every glyph
+   drops straight down from its place and piles on the floor; a
+   final line reveals. Plays once on load. Theme via <html data-theme>.
    ============================================================ */
 
 /* ---- copy (edit here) ---- */
@@ -13,22 +13,15 @@ const COPY = {
   final: "or break things. whatever floats your boat.",
 };
 
-/* ---- glitch glyph pools. Swap CFG.flickerPool to change the script. ---- */
-const SCRIPTS = {
-  // Korean (Hangul syllables)
-  korean: "가나다라마바사아자차카타파하거너더러머버서어저처커터퍼허고노도로모보소오조초코토포호구누두루무부수우주추쿠투푸후그느드르므브스이지치키히",
-  // Chinese (common Hanzi)
-  chinese: "海風山川光時空夢花月雪火水木金土日月生愛道德無心力天地人和氣理形色音雨雷電星雲霧",
-};
-
 /* ---- tuning (edit the feel here) ---- */
 const CFG = {
   enterDelay: 350,        // ms after load before text fades in
-  flickerDelay: 900,      // ms the name stays readable before the glitch
-  flickerDuration: 1100,  // ms of glitching before the collapse
-  flickerTick: 110,       // ms between glitch swaps (real letter ⇄ CJK)
-  flickerCount: 2,        // how many characters glitch (just one or two)
-  flickerPool: SCRIPTS.korean, // characters the glitch swaps in (SCRIPTS.chinese for Chinese)
+  glitchDelay: 900,       // ms the name stays readable before the glitch
+  glitchDuration: 1100,   // ms of glitching before the collapse
+  glitchTick: 90,         // ms between glitch frames (torn ⇄ clean)
+  glitchCount: 2,         // how many characters glitch (just one or two)
+  sliceBands: 4,          // horizontal slices a glitched letter tears into
+  sliceMax: 9,            // px — max sideways jolt of a slice
   settleTime: 3200,       // ms after the collapse starts before the reveal
   gravity: 1,             // Matter world gravity (y)
   restitution: 0.18,      // letter bounciness (lower = less scatter on impact)
@@ -85,7 +78,7 @@ function buildLetters(lines) {
 }
 
 /* Pick a few distinct glyph indices (deterministic, scattered via jitter). */
-function pickFlickerIndices(total, count) {
+function pickGlitchIndices(total, count) {
   const picks = [];
   let i = 0;
   while (picks.length < Math.min(count, total) && i < total * 8) {
@@ -96,46 +89,58 @@ function pickFlickerIndices(total, count) {
   return picks;
 }
 
-/* Beat 2: glitch just one or two characters. The real letter is left
-   completely untouched in the layout; a CJK glyph is painted on top via an
-   absolutely-positioned overlay (which can't affect layout), so nothing
-   ever moves. On CJK ticks the overlay shows and the real letter is hidden
-   (color only); on the alternate ticks the real letter shows through.
-   Returns { id, picks, overlays } so the caller can stop and clean up. */
-function startFlicker(glyphs) {
-  const pool = CFG.flickerPool;
-  const picks = pickFlickerIndices(glyphs.length, CFG.flickerCount).map((k) => glyphs[k]);
-  const overlays = picks.map((span) => {
-    span.style.position = "relative";   // anchor for the overlay; no offset = no move
-    const ov = document.createElement("span");
-    ov.className = "glitch-overlay";
-    ov.setAttribute("aria-hidden", "true");
-    span.append(ov);
-    return ov;
+/* Beat 2: glitch one or two characters with a "datamosh" slice effect. The
+   real letter stays untouched in the layout (so nothing moves); on a torn
+   frame it's hidden and a stack of clipped copies — each a horizontal band of
+   the same glyph, jolted sideways — is painted on top, so the letter looks
+   torn into offset fragments. Frames alternate torn/clean for a broken-signal
+   flicker. Returns { id, picks, bands } so the caller can stop and clean up. */
+function startGlitch(glyphs) {
+  const picks = pickGlitchIndices(glyphs.length, CFG.glitchCount).map((k) => glyphs[k]);
+  const bands = picks.map((span) => {
+    span.style.position = "relative";   // anchor for the slices; no offset = no move
+    const slices = [];
+    for (let b = 0; b < CFG.sliceBands; b += 1) {
+      const slice = document.createElement("span");
+      slice.className = "slice";
+      slice.textContent = span.textContent;
+      slice.setAttribute("aria-hidden", "true");
+      const top = (b / CFG.sliceBands) * 100;
+      const bottom = 100 - ((b + 1) / CFG.sliceBands) * 100;
+      slice.style.clipPath = `inset(${top}% 0 ${bottom}% 0)`;
+      slice.style.visibility = "hidden";
+      span.append(slice);
+      slices.push(slice);
+    }
+    return slices;
   });
   let tick = 0;
   const id = setInterval(() => {
     tick += 1;
-    const showCjk = tick % 2 === 0;
+    const torn = tick % 2 === 0;
     picks.forEach((span, j) => {
-      if (showCjk) {
-        overlays[j].textContent = pool[(tick * 7 + j * 13) % pool.length];
-        overlays[j].style.visibility = "visible";
+      const slices = bands[j];
+      if (torn) {
         span.style.color = "transparent";
+        slices.forEach((slice, b) => {
+          const off = jitter(tick * 3 + b * 5 + j * 11) * CFG.sliceMax;
+          slice.style.transform = `translateX(${off.toFixed(1)}px)`;
+          slice.style.visibility = "visible";
+        });
       } else {
-        overlays[j].style.visibility = "hidden";
         span.style.color = "";
+        slices.forEach((slice) => { slice.style.visibility = "hidden"; });
       }
     });
-  }, CFG.flickerTick);
-  return { id, picks, overlays };
+  }, CFG.glitchTick);
+  return { id, picks, bands };
 }
 
-/* Stop the glitch: remove the overlays and restore the real letters. */
-function stopFlicker(flicker) {
-  clearInterval(flicker.id);
-  flicker.overlays.forEach((ov) => ov.remove());
-  flicker.picks.forEach((span) => {
+/* Stop the glitch: remove the slice copies and restore the real letters. */
+function stopGlitch(glitch) {
+  clearInterval(glitch.id);
+  glitch.bands.forEach((slices) => slices.forEach((slice) => slice.remove()));
+  glitch.picks.forEach((span) => {
     span.style.removeProperty("position");
     span.style.removeProperty("color");
   });
@@ -242,11 +247,11 @@ async function runSequence() {
   await wait(CFG.enterDelay);
   heroEl.classList.add("entered");
 
-  await wait(CFG.flickerDelay);
-  const flicker = startFlicker(glyphs);
+  await wait(CFG.glitchDelay);
+  const glitch = startGlitch(glyphs);
 
-  await wait(CFG.flickerDuration);
-  stopFlicker(flicker);
+  await wait(CFG.glitchDuration);
+  stopGlitch(glitch);
   shatter(glyphs);
 
   await wait(CFG.settleTime);

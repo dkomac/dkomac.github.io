@@ -83,16 +83,17 @@ body {
   display: inline-block;       /* required so per-glyph transforms apply */
 }
 
-/* glitch overlay: a CJK glyph painted on top of a letter without affecting
-   layout (the letter underneath keeps its place; only its color is toggled) */
-.hero .letter .glitch-overlay {
+/* datamosh slice: a clipped horizontal band of a letter, painted on top of
+   the letter and jolted sideways so the glyph looks torn into offset
+   fragments. Absolutely positioned, so it never affects layout. */
+.hero .letter .slice {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  left: 0;
+  top: 0;
   color: var(--text);
   white-space: nowrap;
   pointer-events: none;
+  will-change: transform;
 }
 
 /* a glyph being animated by physics — stays in flow, only its transform
