@@ -104,7 +104,13 @@ function startFlicker(glyphs) {
   const pool = CFG.flickerPool;
   const picks = pickFlickerIndices(glyphs.length, CFG.flickerCount).map((k) => glyphs[k]);
   picks.forEach((span) => {
-    span.style.width = "1.1em";       // reserve full-width so neighbours don't shift
+    // Pin the box to the letter's natural size, then let a wider/taller CJK
+    // glyph overflow visually instead of reflowing the line. The text never
+    // moves — it just drops from exactly where it sits.
+    const r = span.getBoundingClientRect();
+    span.style.width = `${r.width}px`;
+    span.style.height = `${r.height}px`;
+    span.style.overflow = "visible";
     span.style.textAlign = "center";
   });
   let tick = 0;
@@ -125,6 +131,8 @@ function stopFlicker(flicker) {
   flicker.picks.forEach((span) => {
     span.textContent = span.dataset.char;
     span.style.removeProperty("width");
+    span.style.removeProperty("height");
+    span.style.removeProperty("overflow");
     span.style.removeProperty("text-align");
   });
 }
