@@ -15,15 +15,17 @@ const CFG = {
   enterDelay: 350,        // ms after load before text fades in
   flickerDelay: 900,      // ms text stays calm before flicker starts
   flickerDuration: 1100,  // ms of flicker before the collapse
-  settleTime: 2200,       // ms to let letters fall/pile before the reveal
+  settleTime: 3200,       // ms after the collapse starts before the reveal
   gravity: 1,             // Matter world gravity (y)
-  restitution: 0.28,      // letter bounciness
-  friction: 0.55,         // letter surface friction
+  restitution: 0.18,      // letter bounciness (lower = less scatter on impact)
+  friction: 0.6,          // letter surface friction
   frictionAir: 0.01,
   floorThickness: 200,    // px (mostly below the viewport)
-  spinFactor: 0.18,       // initial angular velocity spread
-  kickFactor: 2.2,        // initial sideways velocity spread
-  maxFrames: 900,         // physics loop safety cap (~15s at 60fps)
+  spinFactor: 0.04,       // initial angular velocity spread (gentle tumble, not a whirl)
+  kickFactor: 0.45,       // initial sideways velocity spread (small drift, not a burst)
+  releaseBatch: 2,        // how many letters drop per step (a couple at a time)
+  releaseInterval: 95,    // ms between each batch dropping — the cascade pacing
+  maxFrames: 1400,        // physics loop safety cap (frames)
 };
 
 const prefersReducedMotion = window.matchMedia(
@@ -78,9 +80,11 @@ function startFlicker(glyphs, line2Start) {
   });
 }
 
-/* Beat 3: convert every glyph into a Matter body and run gravity.
-   Glyphs pin to their measured spot (position: fixed), then transform
-   each frame from the body's position + angle so they tumble and pile. */
+/* Beat 3: convert each glyph into a Matter body. Bodies are prepared up
+   front (glyphs pinned in place), then released a couple at a time in
+   reading order so the text drops in a cascade rather than all at once.
+   Released letters fall under gravity and pile on the floor; each frame
+   their span transform tracks its body's position + angle. */
 function shatter(glyphs) {
   const { Engine, Bodies, Composite, Body } = Matter;
   const engine = Engine.create();
@@ -98,7 +102,9 @@ function shatter(glyphs) {
   const rightWall = Bodies.rectangle(W + 30, H / 2, 60, H * 3, { isStatic: true });
   Composite.add(engine.world, [floor, leftWall, rightWall]);
 
-  const items = [];
+  // Prepare every glyph: pin it in place and build its body, but hold the
+  // body out of the world until it's this letter's turn to drop.
+  const pending = [];
   glyphs.forEach((span, i) => {
     const rect = span.getBoundingClientRect();
     if (rect.width < 1 || rect.height < 1) return;
@@ -116,15 +122,12 @@ function shatter(glyphs) {
       friction: CFG.friction,
       frictionAir: CFG.frictionAir,
     });
-    Body.setAngularVelocity(body, jitter(i) * CFG.spinFactor);
-    Body.setVelocity(body, {
-      x: jitter(i * 7) * CFG.kickFactor,
-      y: -Math.abs(jitter(i * 3)) * 1.5,
-    });
-    Composite.add(engine.world, body);
-    items.push({ span, body, cx, cy });
+    pending.push({ span, body, cx, cy, i });
   });
 
+  // Only released letters are tracked here and transformed each frame;
+  // pending letters stay pinned at their measured spot until they drop.
+  const items = [];
   let frames = 0;
   const step = () => {
     Engine.update(engine, 1000 / 60);
@@ -135,11 +138,27 @@ function shatter(glyphs) {
         `translate(${dx}px, ${dy}px) rotate(${it.body.angle}rad)`;
     }
     frames += 1;
-    const allAsleep = items.length > 0 && items.every((it) => it.body.isSleeping);
-    if (allAsleep || frames > CFG.maxFrames) return; // rest
+    const settled =
+      pending.length === 0 &&
+      items.length > 0 &&
+      items.every((it) => it.body.isSleeping);
+    if (settled || frames > CFG.maxFrames) return; // rest
     requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
+
+  // Drop a couple of letters at a time, in reading order.
+  const releaseNext = () => {
+    for (let n = 0; n < CFG.releaseBatch && pending.length > 0; n += 1) {
+      const it = pending.shift();
+      Body.setAngularVelocity(it.body, jitter(it.i) * CFG.spinFactor);
+      Body.setVelocity(it.body, { x: jitter(it.i * 7) * CFG.kickFactor, y: 0 });
+      Composite.add(engine.world, it.body);
+      items.push(it);
+    }
+    if (pending.length > 0) setTimeout(releaseNext, CFG.releaseInterval);
+  };
+  releaseNext();
 }
 
 /* Beat 4: raise the final line into the now-empty center. */
